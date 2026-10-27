@@ -1,141 +1,77 @@
 
-import re
-from datetime import date, time
-
-import requests
 import streamlit as st
+from datetime import date, time
+from urllib.parse import quote
+import re
 
+# Configure your WhatsApp number with country code.
+# Example: 919876543210 (no + or spaces)
+WHATSAPP_NUMBER = "91XXXXXXXXXX"
 
 st.set_page_config(
     page_title="Booking Form",
     page_icon="📅",
-    layout="centered",
+    layout="centered"
 )
 
 st.title("Booking Form")
 
-
-def send_whatsapp_message(name, booking_date, booking_time, contact):
-    """Send an approved WhatsApp template through Meta Cloud API."""
-
-    token = st.secrets["WHATSAPP_TOKEN"]
-    phone_number_id = st.secrets["PHONE_NUMBER_ID"]
-    receiver = st.secrets["WHATSAPP_RECEIVER"]
-    api_version = st.secrets["GRAPH_API_VERSION"]
-    template_name = st.secrets["TEMPLATE_NAME"]
-    template_language = st.secrets["TEMPLATE_LANGUAGE"]
-
-    url = (
-        f"https://graph.facebook.com/"
-        f"{api_version}/{phone_number_id}/messages"
-    )
-
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json",
-    }
-
-    payload = {
-        "messaging_product": "whatsapp",
-        "recipient_type": "individual",
-        "to": receiver,
-        "type": "template",
-        "template": {
-            "name": template_name,
-            "language": {"code": template_language},
-            "components": [
-                {
-                    "type": "body",
-                    "parameters": [
-                        {"type": "text", "text": name},
-                        {"type": "text", "text": booking_date},
-                        {"type": "text", "text": booking_time},
-                        {"type": "text", "text": contact},
-                    ],
-                }
-            ],
-        },
-    }
-
-    response = requests.post(
-        url,
-        headers=headers,
-        json=payload,
-        timeout=20,
-    )
-
-    if not response.ok:
-        # Do not display the access token or request headers.
-        try:
-            error = response.json().get("error", {})
-            message = error.get("message", "WhatsApp API request failed.")
-        except ValueError:
-            message = "WhatsApp API request failed."
-
-        raise RuntimeError(message)
-
-    return response.json()
-
-
 with st.form("booking_form"):
     name = st.text_input("Name")
-    selected_date = st.date_input("Date", value=date.today())
-    selected_time = st.time_input("Time", value=time(10, 0))
-    contact = st.text_input("Contact Number")
 
-    submitted = st.form_submit_button("Submit")
+    booking_date = st.date_input(
+        "Date",
+        value=date.today()
+    )
 
+    booking_time = st.time_input(
+        "Time",
+        value=time(10, 0)
+    )
+
+    contact = st.text_input(
+        "Contact Number",
+        placeholder="Enter your phone number"
+    )
+
+    submitted = st.form_submit_button(
+        "Submit",
+        use_container_width=True
+    )
 
 if submitted:
-    clean_name = name.strip()
-    clean_contact = re.sub(r"[\s()+-]", "", contact.strip())
+    name = name.strip()
+    contact = contact.strip()
 
-    if not clean_name:
+    if not name:
         st.error("Please enter your name.")
 
-    elif not re.fullmatch(r"\d{10,15}", clean_contact):
+    elif not re.fullmatch(r"\+?[\d\s()-]{10,20}", contact):
+        st.error("Please enter a valid contact number.")
+
+    elif "X" in WHATSAPP_NUMBER or not WHATSAPP_NUMBER.isdigit():
         st.error(
-            "Enter a valid contact number with country code "
-            "(10–15 digits)."
+            "Please configure WHATSAPP_NUMBER in app.py."
         )
 
     else:
-        try:
-            message_result = send_whatsapp_message(
-                clean_name,
-                selected_date.strftime("%d-%m-%Y"),
-                selected_time.strftime("%I:%M %p"),
-                contact.strip(),
-            )
+        message = (
+            "New Booking Details\n\n"
+            f"Name: {name}\n"
+            f"Date: {booking_date.strftime('%d-%m-%Y')}\n"
+            f"Time: {booking_time.strftime('%I:%M %p')}\n"
+            f"Contact Number: {contact}"
+        )
 
-            message_id = (
-                message_result.get("messages", [{}])[0].get("id")
-            )
+        whatsapp_url = (
+            f"https://wa.me/{WHATSAPP_NUMBER}"
+            f"?text={quote(message)}"
+        )
 
-            st.success(
-                "Details submitted and WhatsApp API accepted "
-                "the message request."
-            )
+        st.success("Your booking details are ready!")
 
-            if message_id:
-                st.caption(f"Message ID: {message_id}")
-
-        except KeyError as exc:
-            st.error(
-                f"Missing configuration in secrets.toml: {exc}"
-            )
-
-        except requests.RequestException:
-            st.error(
-                "Could not connect to WhatsApp. "
-                "Check your internet connection and try again."
-            )
-
-        except RuntimeError as exc:
-            st.error(f"WhatsApp API error: {exc}")
-
-        except Exception:
-            st.error(
-                "Something went wrong. Check your configuration "
-                "and Streamlit logs."
-            )
+        st.link_button(
+            "Open WhatsApp and Send",
+            whatsapp_url,
+            use_container_width=True
+        )
