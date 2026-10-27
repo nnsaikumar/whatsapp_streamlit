@@ -1,115 +1,98 @@
-
 import streamlit as st
-from datetime import date, time
-from urllib.parse import quote
-import re
-
-# Your WhatsApp number with country code, without + or spaces
-WHATSAPP_NUMBER = "919440882425"
+import streamlit.components.v1 as components
 
 st.set_page_config(
-    page_title="Theja - Swetha Wedding Vehicle Arrangement",
+    page_title="Wedding Vehicle Arrangement",
     page_icon="💒",
-    layout="centered"
+    layout="centered",
 )
 
-st.write(
-    "Welcome! Please provide your details below "
-    "if you need transportation for the wedding."
-)
+WHATSAPP_NUMBER = "919440882425"  # Replace with your number
 
-st.divider()
+st.title("💒 Wedding Vehicle Arrangement")
 
-with st.form("vehicle_request_form"):
-    st.subheader("Guest Details")
+components.html(
+    f"""
+    <form id="vehicleForm">
+        <label>Guest Name *</label>
+        <input id="name" required placeholder="Enter your full name">
 
-    name = st.text_input(
-        "Guest Name *",
-        placeholder="Enter your full name",
-    )
+        <label>Contact Number *</label>
+        <input id="contact" required type="tel"
+               placeholder="Enter mobile number">
 
-    contact = st.text_input(
-        "Contact Number *",
-        placeholder="Enter your mobile number",
-    )
+        <label>Travel Date *</label>
+        <input id="travelDate" required type="date">
 
-    st.subheader("Travel Details")
+        <label>Pickup Time *</label>
+        <input id="pickupTime" required type="time" value="09:00">
 
-    booking_date = st.date_input(
-        "Travel Date *",
-        value=date.today(),
-        min_value=date.today(),
-    )
+        <label>Number of Passengers</label>
+        <input id="passengers" type="number" min="1" max="100" value="2">
 
-    booking_time = st.time_input(
-        "Pickup Time *",
-        value=time(9, 0),
-    )
+        <label>Additional Requirements</label>
+        <textarea id="additional"
+                  placeholder="Enter additional requirements"></textarea>
 
-    passengers = st.number_input(
-        "Number of Passengers",
-        min_value=1,
-        max_value=100,
-        value=2,
-        step=1,
-    )
+        <button type="submit">Submit Vehicle Requirement</button>
+    </form>
 
-    additional_info = st.text_area(
-        "Additional Requirements (Optional)",
-        placeholder="Enter any additional requirements...",
-    )
+    <style>
+        body {{
+            font-family: Arial, sans-serif;
+        }}
+        label {{
+            display: block;
+            margin-top: 14px;
+            margin-bottom: 6px;
+            font-weight: 600;
+        }}
+        input, textarea {{
+            width: 100%;
+            box-sizing: border-box;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+        }}
+        button {{
+            width: 100%;
+            margin-top: 20px;
+            padding: 12px;
+            background: #128C7E;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+        }}
+    </style>
 
-    submitted = st.form_submit_button(
-        "Submit Vehicle Requirement",
-        use_container_width=True,
-    )
+    <script>
+        document.getElementById("vehicleForm").addEventListener("submit", function(e) {{
+            e.preventDefault();
 
-if submitted:
-    name = name.strip()
-    contact = contact.strip()
+            const name = document.getElementById("name").value.trim();
+            const contact = document.getElementById("contact").value.trim();
+            const travelDate = document.getElementById("travelDate").value;
+            const pickupTime = document.getElementById("pickupTime").value;
+            const passengers = document.getElementById("passengers").value;
+            const additional = document.getElementById("additional").value.trim() || "None";
 
-    if not name:
-        st.error("Please enter the guest name.")
+            const message =
+                "💒 WEDDING VEHICLE REQUIREMENT\\n\\n" +
+                "Guest Name: " + name + "\\n" +
+                "Contact Number: " + contact + "\\n" +
+                "Travel Date: " + travelDate + "\\n" +
+                "Pickup Time: " + pickupTime + "\\n" +
+                "Number of Passengers: " + passengers + "\\n" +
+                "Additional Requirements: " + additional;
 
-    elif not re.fullmatch(r"\+?[\d\s()-]{10,20}", contact):
-        st.error("Please enter a valid contact number.")
+            const url = "https://wa.me/{WHATSAPP_NUMBER}?text=" +
+                        encodeURIComponent(message);
 
-    elif not WHATSAPP_NUMBER.isdigit() or "X" in WHATSAPP_NUMBER:
-        st.error("Please configure WHATSAPP_NUMBER in app.py.")
-
-    else:
-        message = (
-            "💒 WEDDING VEHICLE REQUIREMENT\n\n"
-            f"Guest Name: {name}\n"
-            f"Contact Number: {contact}\n"
-            f"Travel Date: {booking_date.strftime('%d-%m-%Y')}\n"
-            f"Pickup Time: {booking_time.strftime('%I:%M %p')}\n"
-            f"Number of Passengers: {passengers}\n"
-            f"Additional Requirements: "
-            f"{additional_info.strip() or 'None'}"
-        )
-
-        whatsapp_url = (
-            f"https://wa.me/{WHATSAPP_NUMBER}"
-            f"?text={quote(message)}"
-        )
-
-        st.success("Your vehicle requirement is ready.")
-
-        st.link_button(
-            "Continue to WhatsApp",
-            whatsapp_url,
-            use_container_width=True,
-        )
-
-        st.caption(
-            "WhatsApp will open with your details filled in. "
-            "Please press Send in WhatsApp to submit your request."
-        )
-
-st.divider()
-
-st.caption(
-    "Please submit your transportation requirements in advance. "
-    "Vehicle availability will be confirmed separately."
+            window.location.href = url;
+        }});
+    </script>
+    """,
+    height=680,
 )
